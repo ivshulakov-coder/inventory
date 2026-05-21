@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Движение остатков — МойСклад</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f5f5;
+    --surface: #ffffff;
+    --surface2: #f8f8f8;
+    --border: #e5e5e5;
+    --text: #1a1a1a;
+    --text2: #666;
+    --text3: #999;
+    --green: #1D9E75;
+    --green-bg: #E1F5EE;
+    --green-text: #0F6E56;
+    --red: #D85A30;
+    --red-bg: #FAECE7;
+    --red-text: #993C1D;
+    --blue: #378ADD;
+    --blue-bg: #E6F1FB;
+    --blue-text: #185FA5;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; font-size: 14px; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* ── LOGIN ── */
+  #loginScreen {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; background: var(--bg);
+  }
+  .login-card {
+    background: var(--surface); border-radius: var(--radius-lg);
+    border: 1px solid var(--border); padding: 40px 36px; width: 360px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.07);
+  }
+  .login-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+  .login-logo i { font-size: 28px; color: var(--blue); }
+  .login-logo span { font-size: 18px; font-weight: 600; }
+  .login-card label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 5px; margin-top: 16px; }
+  .login-card input { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; font-family: inherit; outline: none; transition: border .15s; }
+  .login-card input:focus { border-color: var(--blue); }
+  .login-btn { width: 100%; margin-top: 22px; padding: 10px; background: var(--blue); color: #fff; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background .15s; }
+  .login-btn:hover { background: #185FA5; }
+  .login-error { display: none; margin-top: 12px; background: var(--red-bg); color: var(--red-text); border-radius: var(--radius); padding: 8px 12px; font-size: 13px; }
+
+  /* ── APP ── */
+  #app { display: none; }
+  .topbar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; }
+  .topbar-left i { font-size: 22px; color: var(--blue); }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .logout-btn { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--text2); background: none; border: 1px solid var(--border); border-radius: var(--radius); padding: 5px 12px; cursor: pointer; font-family: inherit; transition: all .15s; }
+  .logout-btn:hover { background: var(--surface2); color: var(--text); }
+
+  .main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+
+  /* token hint */
+  .hint-box { background: var(--blue-bg); border: 1px solid #B5D4F4; border-radius: var(--radius); padding: 10px 14px; margin-bottom: 16px; font-size: 13px; color: var(--blue-text); display: flex; align-items: flex-start; gap: 8px; }
+  .hint-box i { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* token row */
+  .token-row { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .token-row input { flex: 1; min-width: 220px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; font-family: inherit; outline: none; }
+  .token-row input:focus { border-color: var(--blue); }
+
+  /* controls */
+  .controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .controls-left { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+  .dot.loading { background: #EF9F27; animation: pulse 1s infinite; }
+  .dot.error { background: var(--red); }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+
+  /* cards */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 20px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; }
+  .card-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .04em; }
+  .card-val { font-size: 24px; font-weight: 600; }
+  .card-val.g { color: var(--green); }
+  .card-val.r { color: var(--red); }
+  .card-val.b { color: var(--blue); }
+
+  /* filter row */
+  .filter-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .filter-row input[type="search"] { flex: 1; min-width: 180px; padding: 7px 12px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; font-family: inherit; outline: none; }
+  .filter-row input[type="search"]:focus { border-color: var(--blue); }
+
+  /* buttons */
+  button.btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; font-size: 13px; font-family: inherit; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); cursor: pointer; color: var(--text); transition: all .15s; white-space: nowrap; }
+  button.btn:hover { background: var(--surface2); }
+  button.btn.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  button.btn.primary:hover { background: #185FA5; }
+  button.btn:disabled { opacity: .4; cursor: not-allowed; }
+  select.sel { padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; font-family: inherit; background: var(--surface); color: var(--text); cursor: pointer; outline: none; }
+
+  /* table */
+  .tbl-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+  thead th { text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; white-space: nowrap; background: var(--surface2); }
+  thead th:hover { color: var(--text); }
+  tbody tr.gr-row td { background: #fafafa; font-weight: 600; cursor: pointer; border-bottom: 1px solid var(--border); }
+  tbody tr.gr-row:hover td { background: #f0f0f0; }
+  tbody tr.item-row td { background: var(--surface); border-bottom: 1px solid var(--border); }
+  tbody tr.item-row:hover td { background: var(--surface2); }
+  tbody tr.item-row.hidden { display: none; }
+  td { padding: 8px 12px; vertical-align: middle; }
+  .grp-name { display: flex; align-items: center; gap: 7px; }
+  .chevron { font-size: 14px; transition: transform .15s; display: inline-block; color: var(--text2); }
+  .chevron.open { transform: rotate(90deg); }
+
+  /* badges */
+  .badge-in { background: var(--green-bg); color: var(--green-text); font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
+  .badge-out { background: var(--red-bg); color: var(--red-text); font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 500; }
+
+  /* size pills */
+  .sz-row { display: flex; flex-wrap: wrap; gap: 3px; }
+  .sp-in { display: inline-block; background: var(--green-bg); border: 1px solid #9FE1CB; border-radius: 4px; padding: 1px 6px; font-size: 10px; font-weight: 600; color: var(--green-text); }
+  .sp-out { display: inline-block; background: var(--red-bg); border: 1px solid #F5C4B3; border-radius: 4px; padding: 1px 6px; font-size: 10px; font-weight: 600; color: var(--red-text); }
+
+  .pager { margin-top: 12px; font-size: 12px; color: var(--text2); }
+  .empty { text-align: center; padding: 40px; color: var(--text3); }
+
+  /* tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .tab { padding: 8px 16px; font-size: 13px; font-family: inherit; border: none; background: none; cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s; }
+  .tab.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 500; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* chart */
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px; }
+  .chart-title { font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 14px; }
+  .chart-wrap { position: relative; width: 100%; height: 260px; }
+
+  /* sizes grid */
+  .sizes-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .size-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; text-align: center; }
+  .size-card .sz-label { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .size-card .sz-in { color: var(--green-text); font-size: 12px; margin-bottom: 2px; }
+  .size-card .sz-out { color: var(--red-text); font-size: 12px; margin-bottom: 6px; }
+  .size-card .sz-stock { font-size: 22px; font-weight: 600; color: var(--blue); }
+
+  /* chart legend */
+  .chart-legend { display: flex; gap: 16px; font-size: 12px; color: var(--text2); margin-top: 10px; }
+  .chart-legend span { display: flex; align-items: center; gap: 5px; }
+  .leg-sq { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .leg-line { width: 16px; height: 2px; border-radius: 1px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<!-- ───────── LOGIN ───────── -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <i class="ti ti-package"></i>
+      <span>Движение остатков</span>
+    </div>
+    <label>Логин</label>
+    <input type="text" id="loginUser" placeholder="admin" autocomplete="username" />
+    <label>Пароль</label>
+    <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" />
+    <button class="login-btn" onclick="doLogin()">Войти</button>
+    <div class="login-error" id="loginError">Неверный логин или пароль</div>
+  </div>
+</div>
+
+<!-- ───────── APP ───────── -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <i class="ti ti-package"></i>
+      Движение остатков · МойСклад
+    </div>
+    <div class="topbar-right">
+      <span id="versionBadge" style="font-size:11px;color:#999;"></span>
+      <div class="status"><div class="dot" id="sdot"></div><span id="stxt">Готов</span></div>
+      <button class="logout-btn" onclick="doLogout()"><i class="ti ti-logout"></i> Выйти</button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <div class="hint-box" id="hintBox">
+      <i class="ti ti-info-circle"></i>
+      <span>Введите токен МойСклад для загрузки данных. Получить: <b>МойСклад → Настройки → Безопасность → Токены доступа</b>. Токен сохраняется в браузере.</span>
+    </div>
+    <div class="token-row">
+      <input type="password" id="tok" placeholder="Токен МойСклад (Bearer token)..." />
+      <button class="btn primary" onclick="loadData()"><i class="ti ti-plug"></i> Подключить</button>
+      <button class="btn" onclick="useDemo()"><i class="ti ti-player-play"></i> Демо</button>
+    </div>
+
+    <div class="controls">
+      <div class="controls-left">
+        <select class="sel" id="periodSel" onchange="loadData()">
+          <option value="7">7 дней</option>
+          <option value="14">14 дней</option>
+          <option value="30" selected>30 дней</option>
+          <option value="90">90 дней</option>
+        </select>
+        <button class="btn" onclick="loadData()"><i class="ti ti-refresh"></i> Обновить</button>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card"><div class="card-label">Товаров</div><div class="card-val b" id="cP">—</div></div>
+      <div class="card"><div class="card-label">Групп</div><div class="card-val" id="cG">—</div></div>
+      <div class="card"><div class="card-label">Поступило, шт</div><div class="card-val g" id="cI">—</div></div>
+      <div class="card"><div class="card-label">Списано, шт</div><div class="card-val r" id="cO">—</div></div>
+      <div class="card"><div class="card-label">Остаток</div><div class="card-val b" id="cS">—</div></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('products',this)">Товары</button>
+      <button class="tab" onclick="switchTab('chart',this)">График</button>
+      <button class="tab" onclick="switchTab('sizes',this)">По размерам</button>
+    </div>
+
+    <!-- TAB: PRODUCTS -->
+    <div class="tab-panel active" id="tab-products">
+      <div class="filter-row">
+        <input type="search" id="srch" placeholder="Поиск по товару..." oninput="applyFilter()" />
+        <select class="sel" id="grpSel" onchange="applyFilter()"><option value="">Все группы</option></select>
+        <button class="btn" onclick="exportXlsx()" id="xlBtn" disabled><i class="ti ti-table-export"></i> Экспорт Excel</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:36%;" onclick="sortBy('name')">Товар <span id="sn"></span></th>
+              <th style="width:12%;text-align:right;" onclick="sortBy('in')">Приход <span id="si"></span></th>
+              <th style="width:12%;text-align:right;" onclick="sortBy('out')">Списано <span id="so"></span></th>
+              <th style="width:12%;text-align:right;" onclick="sortBy('stock')">Остаток <span id="ss"></span></th>
+              <th style="width:28%;">Размеры</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="5"><div class="empty">Нет данных. Подключите МойСклад или запустите демо.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pager" id="pager"></div>
+    </div>
+
+    <!-- TAB: CHART -->
+    <div class="tab-panel" id="tab-chart">
+      <div class="chart-card">
+        <div class="chart-title">Динамика поступлений и списаний по дням</div>
+        <div class="chart-wrap"><canvas id="mainChart" role="img" aria-label="График движения товаров">Данные не загружены.</canvas></div>
+        <div class="chart-legend" id="chartLegend"></div>
+      </div>
+    </div>
+
+    <!-- TAB: SIZES -->
+    <div class="tab-panel" id="tab-sizes">
+      <div class="sizes-grid" id="sizesGrid">
+        <div style="grid-column:1/-1"><div class="empty">Нет данных.</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// ── VERSION ──
+const VERSION = '1.0.0';
+// CHANGELOG:
+// v1.0.0 — первый релиз: вход по логину/паролю, таблица товаров с группировкой,
+//           фильтр по группе, поиск, экспорт Excel, график по дням, разбивка по размерам XS–XXL
+
+// ── AUTH ──
+const CREDS = { login: 'admin', password: 'Atremare' };
+let chartInst = null;
+
+function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  if (u === CREDS.login && p === CREDS.password) {
+    sessionStorage.setItem('auth', '1');
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('versionBadge').textContent = 'v' + VERSION;
+    const saved = localStorage.getItem('ms_token');
+    if (saved) {
+      document.getElementById('tok').value = saved;
+      document.getElementById('hintBox').style.display = 'none';
+    }
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+function doLogout() {
+  sessionStorage.removeItem('auth');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginError').style.display = 'none';
+}
+document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+if (sessionStorage.getItem('auth') === '1') {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('versionBadge').textContent = 'v' + VERSION;
+  const saved = localStorage.getItem('ms_token');
+  if (saved) { document.getElementById('tok').value = saved; document.getElementById('hintBox').style.display = 'none'; }
+}
+
+// ── TABS ──
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'chart' && allData.length) renderChart();
+  if (name === 'sizes' && allData.length) renderSizes();
+}
+
+// ── DATA ──
+const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+let allData = [], dayData = [];
+let sortCol = 'name', sortDir = 1;
+let openGroups = new Set(), filterStr = '', filterGroup = '';
+
+function setStatus(s, t) {
+  const d = document.getElementById('sdot');
+  d.className = 'dot' + (s === 'l' ? ' loading' : s === 'e' ? ' error' : '');
+  document.getElementById('stxt').textContent = t;
+}
+function ri(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+
+function useDemo() {
+  document.getElementById('hintBox').style.display = 'none';
+  setStatus('ok', 'Демо-данные');
+  const groups = ['Футболки', 'Худи', 'Джинсы', 'Платья', 'Куртки', 'Аксессуары'];
+  const items = [];
+  groups.forEach(g => {
+    for (let i = 1; i <= ri(3, 7); i++) {
+      const inQ = ri(0, 50), outQ = ri(0, Math.min(inQ + 10, 40));
+      const inS = {}, outS = {};
+      let rI = inQ, rO = outQ;
+      SIZES.forEach((sz, idx) => {
+        if (idx === SIZES.length - 1) { inS[sz] = rI; outS[sz] = rO; }
+        else {
+          const n = rI > 0 ? ri(0, Math.min(rI, 12)) : 0; inS[sz] = n; rI = Math.max(0, rI - n);
+          const m = rO > 0 ? ri(0, Math.min(rO, 8)) : 0; outS[sz] = m; rO = Math.max(0, rO - m);
+        }
+      });
+      items.push({ group: g, name: `${g} модель ${i}`, in: inQ, out: outQ, stock: Math.max(0, inQ - outQ), inSizes: inS, outSizes: outS });
+    }
+  });
+  allData = items;
+
+  const days = parseInt(document.getElementById('periodSel').value);
+  const dd = [];
+  let stock = 80;
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const date = d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+    const inQ = Math.random() > 0.6 ? ri(5, 30) : 0;
+    const outQ = ri(2, 15);
+    stock = Math.max(0, stock + inQ - outQ);
+    dd.push({ date, in: inQ, out: outQ, stock });
+  }
+  dayData = dd;
+
+  buildGroupFilter();
+  renderAll();
+  document.getElementById('xlBtn').disabled = false;
+}
+
+async function loadData() {
+  const tok = document.getElementById('tok').value.trim();
+  if (!tok) { useDemo(); return; }
+  localStorage.setItem('ms_token', tok);
+  document.getElementById('hintBox').style.display = 'none';
+  setStatus('l', 'Загрузка...');
+  const days = parseInt(document.getElementById('periodSel').value);
+  const from = new Date(); from.setDate(from.getDate() - days);
+  const fromStr = from.toISOString().slice(0, 10) + ' 00:00:00';
+  const h = { Authorization: 'Bearer ' + tok };
+  try {
+    const [sr, lr] = await Promise.all([
+      fetch(`https://api.moysklad.ru/api/remap/1.2/entity/supply?filter=moment>=${fromStr}&limit=100&expand=positions.assortment,positions.assortment.productFolder`, { headers: h }),
+      fetch(`https://api.moysklad.ru/api/remap/1.2/entity/loss?filter=moment>=${fromStr}&limit=100&expand=positions.assortment,positions.assortment.productFolder`, { headers: h })
+    ]);
+    if (!sr.ok) throw new Error('API ' + sr.status);
+    const [sj, lj] = await Promise.all([sr.json(), lr.json()]);
+
+    const map = {};
+    const ensure = (id, name, group) => { if (!map[id]) map[id] = { id, name, group, in: 0, out: 0, inSizes: {}, outSizes: {} }; };
+    const getSz = a => { const nm = (a?.name || '').toUpperCase(); for (const s of SIZES) if (nm.includes(s)) return s; return 'N/A'; };
+    const getGrp = a => a?.productFolder?.name || a?.pathName || 'Без группы';
+
+    (sj.rows || []).forEach(doc => (doc.positions?.rows || []).forEach(pos => {
+      const a = pos.assortment; if (!a) return;
+      ensure(a.id, a.name || '—', getGrp(a));
+      const q = pos.quantity || 0, s = getSz(a);
+      map[a.id].in += q; map[a.id].inSizes[s] = (map[a.id].inSizes[s] || 0) + q;
+    }));
+    (lj.rows || []).forEach(doc => (doc.positions?.rows || []).forEach(pos => {
+      const a = pos.assortment; if (!a) return;
+      ensure(a.id, a.name || '—', getGrp(a));
+      const q = pos.quantity || 0, s = getSz(a);
+      map[a.id].out += q; map[a.id].outSizes[s] = (map[a.id].outSizes[s] || 0) + q;
+    }));
+
+    allData = Object.values(map).map(d => ({ ...d, stock: Math.max(0, d.in - d.out) }));
+
+    // day data
+    const dayMap = {};
+    const getDay = m => { const d = new Date(m); return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' }); };
+    (sj.rows || []).forEach(doc => { const dt = getDay(doc.moment); if (!dayMap[dt]) dayMap[dt] = { date: dt, in: 0, out: 0 }; (doc.positions?.rows || []).forEach(p => { dayMap[dt].in += p.quantity || 0; }); });
+    (lj.rows || []).forEach(doc => { const dt = getDay(doc.moment); if (!dayMap[dt]) dayMap[dt] = { date: dt, in: 0, out: 0 }; (doc.positions?.rows || []).forEach(p => { dayMap[dt].out += p.quantity || 0; }); });
+    let s = 0;
+    dayData = Object.values(dayMap).map(d => { s += d.in - d.out; return { ...d, stock: Math.max(0, s) }; });
+
+    buildGroupFilter();
+    renderAll();
+    document.getElementById('xlBtn').disabled = false;
+    setStatus('ok', 'Обновлено ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }));
+  } catch (e) { setStatus('e', 'Ошибка: ' + e.message); }
+}
+
+function buildGroupFilter() {
+  const sel = document.getElementById('grpSel');
+  const groups = [...new Set(allData.map(d => d.group))].sort((a, b) => a.localeCompare(b, 'ru'));
+  sel.innerHTML = '<option value="">Все группы</option>' + groups.map(g => `<option value="${g}">${g}</option>`).join('');
+}
+function filtered() {
+  const q = filterStr.toLowerCase(), g = filterGroup;
+  return allData.filter(d => (!q || d.name.toLowerCase().includes(q)) && (!g || d.group === g));
+}
+function applyFilter() {
+  filterStr = document.getElementById('srch').value;
+  filterGroup = document.getElementById('grpSel').value;
+  renderAll();
+}
+function sortBy(col) {
+  if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = 1; }
+  ['n', 'i', 'o', 's'].forEach((c, i) => {
+    document.getElementById('s' + c).textContent = sortCol === ['name', 'in', 'out', 'stock'][i] ? (sortDir === 1 ? '↑' : '↓') : '';
+  });
+  renderTable();
+}
+function renderAll() { updateCards(); renderTable(); }
+
+function updateCards() {
+  const f = filtered();
+  const groups = new Set(f.map(d => d.group));
+  document.getElementById('cP').textContent = f.length;
+  document.getElementById('cG').textContent = groups.size;
+  document.getElementById('cI').textContent = f.reduce((s, d) => s + d.in, 0).toLocaleString('ru-RU');
+  document.getElementById('cO').textContent = f.reduce((s, d) => s + d.out, 0).toLocaleString('ru-RU');
+  document.getElementById('cS').textContent = f.reduce((s, d) => s + d.stock, 0).toLocaleString('ru-RU');
+}
+
+function renderTable() {
+  const data = filtered();
+  if (!data.length) {
+    document.getElementById('tbody').innerHTML = '<tr><td colspan="5"><div class="empty">Ничего не найдено.</div></td></tr>';
+    document.getElementById('pager').textContent = '';
+    return;
+  }
+  const gmap = {};
+  data.forEach(d => {
+    if (!gmap[d.group]) gmap[d.group] = { name: d.group, items: [], in: 0, out: 0, stock: 0 };
+    gmap[d.group].items.push(d);
+    gmap[d.group].in += d.in; gmap[d.group].out += d.out; gmap[d.group].stock += d.stock;
+  });
+  const groups = Object.values(gmap).sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  groups.forEach(g => {
+    g.items.sort((a, b) => sortCol === 'name' ? sortDir * a.name.localeCompare(b.name, 'ru') : sortDir * (a[sortCol] - b[sortCol]));
+  });
+  let html = '';
+  groups.forEach(g => {
+    const gid = 'g-' + g.name.replace(/[^a-zа-я0-9]/gi, '_');
+    const isOpen = openGroups.has(gid) || filterStr.length > 0 || filterGroup.length > 0;
+    html += `<tr class="gr-row" onclick="toggleGroup('${gid}')">
+      <td><div class="grp-name"><span class="chevron ${isOpen ? 'open' : ''}" id="ch-${gid}">›</span>
+        <i class="ti ti-folder" style="font-size:14px;color:#888;"></i>
+        <b>${g.name}</b> <span style="font-size:11px;color:#999;font-weight:400;">(${g.items.length})</span></div></td>
+      <td style="text-align:right;"><span class="badge-in">+${Math.round(g.in)}</span></td>
+      <td style="text-align:right;"><span class="badge-out">-${Math.round(g.out)}</span></td>
+      <td style="text-align:right;font-weight:600;">${Math.round(g.stock)}</td>
+      <td></td>
+    </tr>`;
+    g.items.forEach(item => {
+      const iSz = SIZES.filter(s => (item.inSizes[s] || 0) > 0).map(s => `<span class="sp-in">${s}:${item.inSizes[s]}</span>`).join('');
+      const oSz = SIZES.filter(s => (item.outSizes[s] || 0) > 0).map(s => `<span class="sp-out">${s}:${item.outSizes[s]}</span>`).join('');
+      html += `<tr class="item-row ${isOpen ? '' : 'hidden'}" data-gid="${gid}">
+        <td style="padding-left:28px;">${item.name}</td>
+        <td style="text-align:right;">${item.in > 0 ? Math.round(item.in) : '—'}</td>
+        <td style="text-align:right;">${item.out > 0 ? Math.round(item.out) : '—'}</td>
+        <td style="text-align:right;font-weight:600;">${Math.round(item.stock)}</td>
+        <td><div class="sz-row">${iSz}${oSz}${!iSz && !oSz ? '—' : ''}</div></td>
+      </tr>`;
+    });
+  });
+  document.getElementById('tbody').innerHTML = html;
+  document.getElementById('pager').textContent = `Показано: ${data.length} товаров в ${groups.length} группах`;
+}
+
+function toggleGroup(gid) {
+  if (openGroups.has(gid)) openGroups.delete(gid); else openGroups.add(gid);
+  const open = openGroups.has(gid);
+  document.querySelectorAll(`[data-gid="${gid}"]`).forEach(r => r.classList.toggle('hidden', !open));
+  const ch = document.getElementById('ch-' + gid);
+  if (ch) ch.classList.toggle('open', open);
+}
+
+function renderChart() {
+  if (!dayData.length) return;
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+  chartInst = new Chart(document.getElementById('mainChart'), {
+    type: 'bar',
+    data: {
+      labels: dayData.map(d => d.date),
+      datasets: [
+        { label: 'Поступило', data: dayData.map(d => d.in), backgroundColor: 'rgba(29,158,117,.75)', borderRadius: 3, yAxisID: 'y' },
+        { label: 'Списано', data: dayData.map(d => d.out), backgroundColor: 'rgba(216,90,48,.75)', borderRadius: 3, yAxisID: 'y' },
+        { label: 'Остаток', data: dayData.map(d => d.stock), type: 'line', borderColor: '#378ADD', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 0, tension: 0.3, yAxisID: 'y2' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + Math.round(ctx.parsed.y) + ' шт' } } },
+      scales: {
+        x: { ticks: { font: { size: 11 }, maxRotation: 45 }, grid: { display: false } },
+        y: { position: 'left', ticks: { font: { size: 11 }, callback: v => Math.round(v) } },
+        y2: { position: 'right', ticks: { font: { size: 11 }, callback: v => Math.round(v) }, grid: { drawOnChartArea: false } }
+      }
+    }
+  });
+  document.getElementById('chartLegend').innerHTML = `
+    <span><span class="leg-sq" style="background:rgba(29,158,117,.75);"></span>Поступило</span>
+    <span><span class="leg-sq" style="background:rgba(216,90,48,.75);"></span>Списано</span>
+    <span><span class="leg-line" style="background:#378ADD;"></span>Остаток</span>`;
+}
+
+function renderSizes() {
+  const totIn = {}, totOut = {};
+  SIZES.forEach(s => { totIn[s] = 0; totOut[s] = 0; });
+  filtered().forEach(d => SIZES.forEach(s => { totIn[s] += d.inSizes[s] || 0; totOut[s] += d.outSizes[s] || 0; }));
+  document.getElementById('sizesGrid').innerHTML = SIZES.map(sz => `
+    <div class="size-card">
+      <div class="sz-label">${sz}</div>
+      <div class="sz-in">↑ Приход: ${Math.round(totIn[sz])}</div>
+      <div class="sz-out">↓ Списано: ${Math.round(totOut[sz])}</div>
+      <div class="sz-stock">${Math.round(Math.max(0, totIn[sz] - totOut[sz]))}</div>
+    </div>`).join('');
+}
+
+function exportXlsx() {
+  if (!allData.length) return;
+  const days = document.getElementById('periodSel').value;
+  const data = filtered();
+  const wb = XLSX.utils.book_new();
+
+  const rows = [['Группа', 'Товар', 'Приход', 'Списано', 'Остаток', ...SIZES.map(s => 'Приход ' + s), ...SIZES.map(s => 'Списание ' + s)]];
+  data.forEach(d => rows.push([d.group, d.name, d.in, d.out, d.stock, ...SIZES.map(s => d.inSizes[s] || 0), ...SIZES.map(s => d.outSizes[s] || 0)]));
+  const ws1 = XLSX.utils.aoa_to_sheet(rows);
+  ws1['!cols'] = [{ wch: 20 }, { wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, ...SIZES.map(() => ({ wch: 10 })), ...SIZES.map(() => ({ wch: 12 }))];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Все товары');
+
+  const gmap = {};
+  data.forEach(d => {
+    if (!gmap[d.group]) gmap[d.group] = { in: 0, out: 0, stock: 0, count: 0, inS: {}, outS: {} };
+    gmap[d.group].in += d.in; gmap[d.group].out += d.out; gmap[d.group].stock += d.stock; gmap[d.group].count++;
+    SIZES.forEach(s => { gmap[d.group].inS[s] = (gmap[d.group].inS[s] || 0) + (d.inSizes[s] || 0); gmap[d.group].outS[s] = (gmap[d.group].outS[s] || 0) + (d.outSizes[s] || 0); });
+  });
+  const gRows = [['Группа', 'Товаров', 'Приход', 'Списано', 'Остаток', ...SIZES.map(s => 'Приход ' + s), ...SIZES.map(s => 'Списание ' + s)]];
+  Object.entries(gmap).sort((a, b) => a[0].localeCompare(b[0], 'ru')).forEach(([g, v]) => {
+    gRows.push([g, v.count, v.in, v.out, v.stock, ...SIZES.map(s => v.inS[s] || 0), ...SIZES.map(s => v.outS[s] || 0)]);
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(gRows);
+  XLSX.utils.book_append_sheet(wb, ws2, 'По группам');
+
+  XLSX.writeFile(wb, `остатки_${days}дней.xlsx`);
+}
+
+document.getElementById('tok').addEventListener('keydown', e => { if (e.key === 'Enter') loadData(); });
+</script>
+</body>
+</html>
